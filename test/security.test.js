@@ -568,12 +568,6 @@ test('CVE-2026-76172: resolve throws when a component scheme decodes into delimi
   )
 })
 
-test('CVE-2026-76172: a scheme that decodes to a valid scheme is still accepted', (t) => {
-  t.plan(2)
-  t.equal(fastURI.parse('htt%70://example.com/').scheme, 'http', 'harmless encoded scheme decodes to http')
-  t.equal(fastURI.normalize('ht%74ps://example.com:443/'), 'https://example.com/', 'decoded scheme selects its scheme handler')
-})
-
 test('CVE-2026-76172: no API emits a delimiter-bearing scheme that reparses as an authority', (t) => {
   t.plan(9)
   t.throws(

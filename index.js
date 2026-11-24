@@ -10,15 +10,19 @@ const MALFORMED_SCHEME_ERROR = 'URI scheme is malformed.'
  * Decode a scheme once and require it to stay a valid RFC 3986 scheme. Rejects
  * a scheme that decodes into reserved delimiters (e.g. "%2f%2f").
  *
+ * RFC 3986 section 3.1 does not allow percent-encoding in a scheme, so the
+ * scheme is validated as-is and never decoded. Decoding would let inert input
+ * such as `%6Aavascript:` become a live `javascript:` scheme.
+ *
  * @param {string} scheme
  * @returns {string}
  */
-function decodeValidScheme (scheme) {
-  const decodedScheme = unescape(String(scheme))
-  if (!VALID_SCHEME.test(decodedScheme)) {
+function validateScheme (scheme) {
+  const stringScheme = String(scheme)
+  if (!VALID_SCHEME.test(stringScheme)) {
     throw new TypeError(MALFORMED_SCHEME_ERROR)
   }
-  return decodedScheme
+  return stringScheme
 }
 
 /**
@@ -210,7 +214,7 @@ function serialize (cmpts, opts) {
   const uriTokens = []
 
   if (component.scheme) {
-    component.scheme = decodeValidScheme(component.scheme)
+    component.scheme = validateScheme(component.scheme)
   }
 
   // find scheme handler
@@ -233,7 +237,7 @@ function serialize (cmpts, opts) {
 
   if (options.reference !== 'suffix' && component.scheme) {
     // Scheme handlers may replace the scheme during serialization.
-    component.scheme = decodeValidScheme(component.scheme)
+    component.scheme = validateScheme(component.scheme)
     uriTokens.push(component.scheme, ':')
   }
 
@@ -447,10 +451,9 @@ function parseWithStatus (uri, opts) {
       // otherwise let normalize()/resolve() emit a string that reparses with a
       // different authority (host-allowlist bypass). The scheme case is
       // preserved; scheme handlers are looked up case-insensitively.
-      const decodedScheme = unescape(parsed.scheme)
-      if (VALID_SCHEME.test(decodedScheme)) {
-        parsed.scheme = decodedScheme
-      } else {
+      // RFC 3986 section 3.1 does not allow percent-encoding in a scheme, so
+      // the raw scheme is validated and never decoded.
+      if (!VALID_SCHEME.test(parsed.scheme)) {
         parsed.error = parsed.error || MALFORMED_SCHEME_ERROR
         malformedScheme = true
       }
